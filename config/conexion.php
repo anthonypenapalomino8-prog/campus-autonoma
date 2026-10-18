@@ -1,30 +1,38 @@
+
 <?php
 
-$host = 'mysql-2a123e6-anthonypenapalomino8-1777.f.aivencloud.com';
-$port = 15349;
-$dbname = 'defaultdb';
-$user = 'avnadmin';
-$password = 'AVNS_WxC6m0FthE1Gxbhil8w';
+$host = getenv('DB_HOST') ?: 'localhost';
+$port = getenv('DB_PORT') ?: '3306';
+$dbname = getenv('DB_NAME') ?: 'sistema_ventas';
+$user = getenv('DB_USER') ?: 'root';
+$password = getenv('DB_PASSWORD') ?: '';
 
-$ca = __DIR__ . '/certificados/ca.pem';
-if (!file_exists($ca)) {
-    exit('No se encuentra el certificado: ' . $ca);
+$opciones = [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_EMULATE_PREPARES => false
+];
+
+if ($host !== 'localhost' && $host !== '127.0.0.1') {
+    $ca = __DIR__ . '/certificados/ca.pem';
+
+    if (!file_exists($ca)) {
+        error_log('No se encuentra el certificado CA de MySQL.');
+        exit('Error de configuración de la base de datos.');
+    }
+
+    $opciones[PDO::MYSQL_ATTR_SSL_CA] = $ca;
+    $opciones[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = true;
 }
+
 try {
     $conexion = new PDO(
         "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4",
         $user,
         $password,
-        [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
-            PDO::MYSQL_ATTR_SSL_CA => $ca,
-            PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => true,
-            PDO::ATTR_TIMEOUT => 10
-        ]
+        $opciones
     );
 } catch (PDOException $e) {
     error_log($e->getMessage());
-    exit('Error de conexión: ' . htmlspecialchars($e->getMessage()));
+    exit('No se pudo conectar con la base de datos.');
 }
